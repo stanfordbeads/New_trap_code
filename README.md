@@ -23,6 +23,9 @@ Accessing the JupyterHub
 Using the JupyterHub Terminal
 
 Data saving 101
+  - Data base with tags
+  - Data saving structure
+  
 
 Processing
 
