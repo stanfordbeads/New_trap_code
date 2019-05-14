@@ -36,11 +36,13 @@ Data
 - fine discharging data
 - height finding data
 - measurement of interest
+(add further like spinning is of course done as required)
 
+Database
+Given the .XML output we will implement a search and selectable data base in order to do systematic research through data. 
 
-  
-
-Processing
+Data processor
+We will investigate the old data processor and use it. However, a parallelization should be added.
 
 High-level analysis
 
