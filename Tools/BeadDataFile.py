@@ -4,6 +4,7 @@ import datetime as dt
 import h5py, os, re, glob, time, sys, fnmatch, inspect
 
 import matplotlib.pyplot as plt
+import matplotlib
 import scipy.signal as signal
 import scipy
 from scipy.signal import welch
@@ -21,8 +22,19 @@ class BeadDataFile:
         quad_data = np.array(f['quad_data']) 
         self.fsamp = f.attrs['Fsamp']
         self.fsamp /= f.attrs['downsamp']
-
         
+        self.cant_true = False
+        try:
+            self.cant_pos = np.array(f['cant_data'])
+            self.cant_true = True
+        except:
+            print('No cantilever data')
+
+        if self.cant_true:
+            self.cant_settings = np.array(f['cantilever_settings'])
+            self.cant_axis = f.attrs['cantilever_axis']
+            self.cant_freq = f.attrs['cantilever_freq']
+
         ## estimate xyz based on amp-phase
         self.amp = quad_data.reshape(-1,12).T[:5]
         self.phase = quad_data.reshape(-1,12).T[5:10]
@@ -30,14 +42,14 @@ class BeadDataFile:
         left = self.amp[2] + self.amp[3]
         top = self.amp[0] + self.amp[2]
         bottom = self.amp[1] + self.amp[3]
-        quad_sum = right + left
-        self.x2 = (right - left)/quad_sum
-        self.y2 = (top - bottom)/quad_sum    
+        self.quad_sum = right + left
+        self.x2 = (right - left)/self.quad_sum
+        self.y2 = (top - bottom)/self.quad_sum    
         self.z2 = self.phase[4]   
 
         self.x3 = (self.phase[0]+self.phase[1])-(self.phase[2]+self.phase[3])
         self.y3 = (self.phase[0]+self.phase[2])-(self.phase[1]+self.phase[3])
-        self.z3 = quad_sum
+        self.z3 = self.quad_sum
         ## reshape and extract xyz data
         ## assuming the data contains the correct amount of samples ordered in a correct way
         ## in the reprocessor a testing prcedure has to be implemented
@@ -67,17 +79,17 @@ class BeadDataFile:
 
         x = []
         if str_axis=='x':
-            x = self.xyz[0]
+            x = self.x2
         elif str_axis=='y':
-            x = self.xyz[1]
+            x = self.y2
         elif str_axis=='z':
-            x = self.xyz[2]
+            x = self.z3
         else:
             print('Must choose x,y,or z')
        
-        #ypsd, freqs = matplotlib.mlab.psd(data_det[4], Fs = fsamp, NFFT = res)
-        freq, psd = welch(x, fs = self.fsamp, nfft = res)
-        return freq, psd
+        ypsd, freqs = matplotlib.mlab.psd(x, Fs = self.fsamp, NFFT = res)
+        #freq, psd = welch(x, fs = self.fsamp, nfft = res)
+        return freqs, ypsd
 
     
     def psd(self, str_axis, res = 2**12):
@@ -108,7 +120,7 @@ class BeadDataFile:
         else:
             print('Must choose x,y,or z')
 
-        fft = np.abs(np.fft.rfft(x))**2 
+        fft = np.abs(np.fft.rfft(x,norm='ortho'))**2 
         freq = np.fft.rfftfreq(len(x), d=1./self.fsamp)
 
         return freq, fft
