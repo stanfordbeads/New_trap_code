@@ -34,6 +34,11 @@ class BeadDataFile:
             self.cant_settings = np.array(f['cantilever_settings'])
             self.cant_axis = f.attrs['cantilever_axis']
             self.cant_freq = f.attrs['cantilever_freq']
+        
+        try:
+            self.spin_data = np.array(f['spin_data'])
+        except:
+            print('Error loading spinning data')
 
         ## estimate xyz based on amp-phase
         self.amp = quad_data.reshape(-1,12).T[:5]
