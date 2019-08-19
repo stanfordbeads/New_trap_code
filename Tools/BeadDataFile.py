@@ -51,6 +51,7 @@ class BeadDataFile:
         self.x2 = (right - left)/self.quad_sum
         self.y2 = (top - bottom)/self.quad_sum    
         self.z2 = self.phase[4]   
+        self.xyz2 = np.array([self.x2, self.y2, self.z2])
 
         self.x3 = (self.phase[0]+self.phase[1])-(self.phase[2]+self.phase[3])
         self.y3 = (self.phase[0]+self.phase[2])-(self.phase[1]+self.phase[3])
