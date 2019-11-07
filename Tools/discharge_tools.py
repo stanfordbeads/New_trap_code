@@ -29,4 +29,9 @@ def load_dir(dirname, file_prefix = 'Discharge', max_file=500):
     return BDFs
 
 
+def discharge_response(foldername, str_axis, drive_freq):
+    
+    bdfs = load_dir(foldername)
+    resp = [np.std(bb.response_at_freq2(str_axis, drive_freq=drive_freq)) for bb in bdfs]
 
+    return resp
