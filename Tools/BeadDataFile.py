@@ -22,7 +22,13 @@ class BeadDataFile:
         quad_data = np.array(f['quad_data']) 
         self.fsamp = f.attrs['Fsamp']
         self.fsamp /= f.attrs['downsamp']
-        
+
+        try:
+            self.electrode_data = np.array(f['electrode_data'])
+            self.electrode_channels = np.array(f.attrs['electrode_channel'])
+        except:
+            print('No electrodes data')
+
         self.cant_true = False
         try:
             self.cant_pos = np.array(f['cant_data'])
@@ -71,6 +77,10 @@ class BeadDataFile:
 
         #Conditions under which data is taken
         self.time = "Time not loaded"
+        high = np.uint32(pos_data.reshape(-1,11)[9])
+        low = np.uint32(pos_data.reshape(-1,11)[10])
+        self.time = (high.astype(np.uint64) << np.uint64(32)) + low.astype(np.uint64)
+        
         #loads time at end of file
         self.temps = []
         self.pressures = {} # loads to dict with keys different gauges
@@ -90,10 +100,15 @@ class BeadDataFile:
             x = self.y2
         elif str_axis=='z':
             x = self.z3
+        elif str_axis=='spin':
+            x = self.spin_data
         else:
             print('Must choose x,y,or z')
-       
-        ypsd, freqs = matplotlib.mlab.psd(x, Fs = self.fsamp, NFFT = res)
+        
+        if str_axis=='spin':
+            ypsd, freqs = matplotlib.mlab.psd(x, Fs = self.fsamp*10, NFFT = res)
+        else:
+            ypsd, freqs = matplotlib.mlab.psd(x, Fs = self.fsamp, NFFT = res)
         #freq, psd = welch(x, fs = self.fsamp, nfft = res)
         return freqs, ypsd
 
