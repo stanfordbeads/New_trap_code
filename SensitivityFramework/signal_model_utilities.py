@@ -60,7 +60,9 @@ def load_file(separation,lambda_par=1e-5,alpha=1):
         val = take_closest(lambdas, lambda_par)
         lambda_par=val  
         print("Taking %2.2e for lambda" %val)
-        
+    for item in res_dict_side_by_side[2.4e-6]:
+        print("A separation of %2.2e is selected" %item)
+        separation=item # as separation is saved differently here than in the file name
     force_x = res_dict_side_by_side[2.4e-6][separation][0][lambda_par][0] # force in direction of the sphere
     force_y = res_dict_side_by_side[2.4e-6][separation][0][lambda_par][1] # force in direction perpendicular to the sphere
     force_z = res_dict_side_by_side[2.4e-6][separation][0][lambda_par][2] # force in z-direction

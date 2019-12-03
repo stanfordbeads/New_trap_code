@@ -28,6 +28,23 @@ def load_dir(dirname, file_prefix = 'Discharge', max_file=500):
     
     return BDFs
 
+def load_dir_sorted(dirname, file_prefix = 'Discharge', max_file=500):
+    ''' Load all files in directory to a list of BeadDataFile
+        INPUTS: dirname, directory name
+        max_file, maximum number of files to read'''
+        
+    ## Load all filenames in directory
+    files = []
+    [files.append(file_) for file_ in os.listdir(dirname) if file_.startswith(file_prefix) if file_.endswith('.h5')]
+    files.sort(key=lambda f: int(''.join(filter(str.isdigit, f))))    
+    # Load data into a BeadDataFile list
+    BDFs = [BDF.BeadDataFile(dirname+filename) for filename in files[:max_file]]
+    
+    print(len(files),' files in folder')
+    print(len(BDFs),' files loaded')
+    
+    return BDFs
+
 
 def discharge_response(foldername, str_axis, drive_freq):
     
