@@ -72,7 +72,6 @@ class BeadDataFile:
         #placeholders for later analysis
         self.diag_pos_data = []
         self.cant_data = []
-        self.electrode_data = []
         self.other_data = []
 
         #Conditions under which data is taken
