@@ -68,7 +68,7 @@ class BeadDataFile:
         ## pos_data contains:
         ## [x_lf_2, y_lf_2, x_lf, y_lf, z_lf, sync, x_fb, y_fb, z_fb, time1, time2]
         self.xyz = pos_data.reshape(-1,11).T[2:5]
-        
+        self.feedback = pos_data.reshape(-1,11).T[6:9]
         #placeholders for later analysis
         self.diag_pos_data = []
         self.cant_data = []
@@ -76,10 +76,11 @@ class BeadDataFile:
 
         #Conditions under which data is taken
         self.time = "Time not loaded"
-        high = np.uint32(pos_data.reshape(-1,11)[9])
-        low = np.uint32(pos_data.reshape(-1,11)[10])
+        high = np.uint32(pos_data.reshape(-1,11).T[9])
+        low = np.uint32(pos_data.reshape(-1,11).T[10])
         self.time = (high.astype(np.uint64) << np.uint64(32)) + low.astype(np.uint64)
-        
+
+
         #loads time at end of file
         self.temps = []
         self.pressures = {} # loads to dict with keys different gauges
