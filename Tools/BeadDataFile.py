@@ -23,6 +23,12 @@ class BeadDataFile:
         self.fsamp = f.attrs['Fsamp']
         self.fsamp /= f.attrs['downsamp']
 
+        
+        try: 
+            self.bead_height = f.attrs['bead_height']
+        except:
+            print('No height data')
+
         try:
             self.electrode_data = np.array(f['electrode_data'])
             self.electrode_channels = np.array(f.attrs['electrode_channel'])
@@ -40,7 +46,6 @@ class BeadDataFile:
             self.cant_settings = np.array(f['cantilever_settings'])
             self.cant_axis = f.attrs['cantilever_axis']
             self.cant_freq = f.attrs['cantilever_freq']
-        
         try:
             self.spin_data = np.array(f['spin_data'])
         except:
