@@ -1,28 +1,46 @@
 # import stuff
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib
 import os
+import cv2
 import scipy
 from scipy import signal
-import h5py, time
+import h5py
+import time
+import datetime as dt
+from tqdm import tqdm
+import iminuit
 from iminuit import Minuit, describe
 from pprint import pprint # we use this to pretty print some stuff later
 import glob
-import pandas as pd
 import sys
+
 sys.path.append('/home/analysis_user/New_trap_code/Tools/')
 import BeadDataFile
 from discharge_tools import *
-from bisect import bisect_left
-from tqdm import tqdm
-import datetime as dt
+from AnaUtil import *
 
-# some settings for figures which look acceptable
-plt.rcParams["figure.figsize"] = (12,9)
-plt.rcParams["font.size"] = 24
-plt.rcParams['xtick.labelsize'] = "small"
-plt.rcParams['ytick.labelsize'] = 36
+from joblib import Parallel, delayed
+import multiprocessing
+
+
+# basic functions and cost functions
+
+# for use the example notebook in New_Trap_Code/Scripts
+def gaussian(x,params=list):
+    norm = (1/((1/2*params[2])*np.sqrt(np.pi * 2)))
+    return params[0] * norm * np.exp(-(np.subtract(x,params[1])**2/(2*params[2]**2)))+params[3]
+
+def chisquare_1d(function, functionparams, data_x, data_y,data_y_error):
+    chisquarevalue=np.sum(np.power(np.divide(np.subtract(function(data_x,functionparams),data_y),data_y_error),2))
+    ndf = len(data_y)-len(functionparams)
+    #print(ndf)
+    return (chisquarevalue, ndf)
+
+def chisquare_gaussian(area,mean,sigma,constant):
+    return chisquare_1d(function=gaussian,functionparams=[area,mean,sigma,constant],data_x=data_x,data_y=data_y,data_y_error=data_y_error)[0]
 
 
 # calibration of the voltage - position conversion

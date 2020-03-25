@@ -222,4 +222,3 @@ class BeadDataFile:
         return responsefilt
 
 
-

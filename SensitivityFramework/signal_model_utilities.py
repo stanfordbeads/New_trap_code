@@ -15,6 +15,7 @@ from discharge_tools import load_dir
 lambdas = np.logspace(-6.3, -3, 100)
 sep_list = np.arange(0.0e-6,100e-6,0.5e-6)
 height_list = np.arange(-15.0e-6,15.0e-6,0.5e-6)
+size_list = np.asarray([2.4e-6,3.8e-6])
 ### define functions
 
 
@@ -42,45 +43,54 @@ def take_closest(myList, myNumber):
 
 ## load the data dictionary file (its usually of the form results_dic[rbead][sep][height][yuklambda])
 
-def load_file(separation,height,lambda_par=1e-5,alpha=1):
+def load_file(separation,height,lambda_par=1e-5,alpha=1,bead_size=2.4e-6):
     """
 Load position and force from a file based on separation, height and the lambda_parameter. Alpha only scales the result. If not existing it picks the closest parameter in the list. The original list it got greated from are:
 lambdas = np.logspace(-6.3, -3, 100) for lambdas
 sep_list = np.arange(0.0e-6,100e-6,0.5e-6) for separation
 height_list = np.arange(-15.0e-6,15.0e-6,0.5e-6) for height
+bead_size = (2.4e-6,3.8e-6)
     """ 
     try:
         #print(height)
-        res_dict_side_by_side = pkl.load( open('/home/analysis_user/New_trap_code/SensitivityFramework/results/simulation/rbead_2.4e-06_sep_%4.1e_height_%4.1e.p' % (separation,height) ,'rb'))
+        res_dict_side_by_side = pkl.load( open('/home/analysis_user/New_trap_code/SensitivityFramework/results/simulation/bead_%4.1e/rbead_%4.1e_sep_%4.1e_height_%4.1e.p' % (bead_size,bead_size,separation,height) ,'rb'))
     except:
         print("Your choice of separation or height is not existing")
         val2 = take_closest(sep_list, separation)
         val3 = take_closest(height_list, height)
+        val4= take_closest(size_list,bead_size)
         separation=val2  
         height=val3
+        bead_size = val4
+        print("Taking %4.1e for bead_size" %val4)
         print("Taking %4.1e for separation" %val2)
         print("Taking %4.1e for height" %val3)
-        res_dict_side_by_side = pkl.load( open('/home/analysis_user/New_trap_code/SensitivityFramework/results/simulation/rbead_2.4e-06_sep_%4.1e_height_%4.1e.p' %(separation,height), 'rb'))
+        res_dict_side_by_side = pkl.load( open('/home/analysis_user/New_trap_code/SensitivityFramework/results/simulation//bead_%4.1e/rbead_%4.1e_sep_%4.1e_height_%4.1e.p' %(bead_size,bead_size,separation,height), 'rb'))
     try:
-        res_dict_side_by_side[2.4e-6][separation][height][lambda_par][0]        
+        res_dict_side_by_side[bead_size][separation][height][lambda_par][0]        
     except:
         print("Your choice of lambda is not existing")
         val = take_closest(lambdas, lambda_par)
         lambda_par=val  
         print("Taking %2.2e for lambda" %val)
-    for item in res_dict_side_by_side[2.4e-6]:
-        print("A separation of %2.2e is selected" %item)
-        separation=item # as separation is saved differently here than in the file name
-    for item2 in res_dict_side_by_side[2.4e-6][separation]:
+    for item0 in res_dict_side_by_side:
+        print(item0)
+        print("A bead size of %2.2e is selected" %bead_size)
+        bead_size = bead_size
+        print(bead_size)
+    for item1 in res_dict_side_by_side[bead_size]:
+        print("A separation of %2.2e is selected" %item1)
+        separation=item1 # as separation is saved differently here than in the file name
+    for item2 in res_dict_side_by_side[bead_size][separation]:
         #print(res_dict_side_by_side[2.4e-6][separation])
         height=item2
         print("A height of %2.2e is selected" %item2)      
-    force_x = res_dict_side_by_side[2.4e-6][separation][height][lambda_par][0] # force in direction of the sphere
-    force_y = res_dict_side_by_side[2.4e-6][separation][height][lambda_par][1] # force in direction perpendicular to the sphere
-    force_z = res_dict_side_by_side[2.4e-6][separation][height][lambda_par][2] # force in z-direction
-    force_x_yuk = alpha*res_dict_side_by_side[2.4e-6][separation][height][lambda_par][3] # force by the yukawa potential , x
-    force_y_yuk = alpha*res_dict_side_by_side[2.4e-6][separation][height][lambda_par][4] # force by the yukawa potential , y
-    force_z_yuk = alpha*res_dict_side_by_side[2.4e-6][separation][height][lambda_par][5] # force by the yukawa potential , z
+    force_x = res_dict_side_by_side[bead_size][separation][height][lambda_par][0] # force in direction of the sphere
+    force_y = res_dict_side_by_side[bead_size][separation][height][lambda_par][1] # force in direction perpendicular to the sphere
+    force_z = res_dict_side_by_side[bead_size][separation][height][lambda_par][2] # force in z-direction
+    force_x_yuk = alpha*res_dict_side_by_side[bead_size][separation][height][lambda_par][3] # force by the yukawa potential , x
+    force_y_yuk = alpha*res_dict_side_by_side[bead_size][separation][height][lambda_par][4] # force by the yukawa potential , y
+    force_z_yuk = alpha*res_dict_side_by_side[bead_size][separation][height][lambda_par][5] # force by the yukawa potential , z
     pos = res_dict_side_by_side["posvec"] # get the position of the bead from the dictionary
     force_list = [force_x,force_y,force_z,force_x_yuk,force_y_yuk,force_z_yuk]
     return pos,force_list
@@ -149,19 +159,19 @@ def force_at_a_time_tri_function(stroke,time,frequency,pos_vec,force_vec,width=0
 
 # use those two for most of your applications
 
-def force_vs_position(separation,height,direction,lambda_par,yuk_or_grav="yuk",alpha=1):
+def force_vs_position(separation,height,direction,lambda_par,yuk_or_grav="yuk",alpha=1,bead_size=2.4e-6):
     '''
     In order to be able also to implement own strokes and attractor movement profiles this extracts the pure force vs position of the attractor
     '''
-    pos,force_list = load_file(separation,height,lambda_par,alpha)
+    pos,force_list = load_file(separation,height,lambda_par,alpha,bead_size)
     force = force_at_position(direction,pos,force_list,yuk_or_grav)
     return pos,force
 
-def force_vs_time(separation,height,stroke,frequency,direction,lambda_par,offset_y=0,yuk_or_grav="yuk",alpha=1):
+def force_vs_time(separation,height,stroke,frequency,direction,lambda_par,offset_y=0,yuk_or_grav="yuk",alpha=1,bead_size=2.4e-6):
     '''
     This gives the force as a function of time for a sinusoidial movement in the y-direction. The time parameter is a second sampled with 5kHz.
     '''
-    pos,force_list = load_file(separation,height,lambda_par,alpha)
+    pos,force_list = load_file(separation,height,lambda_par,alpha,bead_size)
     force_vec = force_at_position(direction,pos,force_list,yuk_or_grav="yuk")
     force = force_at_a_time_sin_function(stroke,time,frequency,pos,force_vec,offset_y=offset_y)
     return time,force

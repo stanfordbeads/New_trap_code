@@ -46,9 +46,7 @@ def load_dir_sorted(dirname, file_prefix = 'Discharge', max_file=500):
     return BDFs
 
 
-def discharge_response(foldername, str_axis, drive_freq):
-    
-    bdfs = load_dir(foldername)
+def discharge_response(foldername, str_axis, drive_freq,max_file=500):
+    bdfs = load_dir(foldername,max_file=max_file)
     resp = [np.std(bb.response_at_freq2(str_axis, drive_freq=drive_freq)) for bb in bdfs]
-
     return resp
