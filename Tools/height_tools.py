@@ -1,146 +1,165 @@
 import numpy as np
 import pandas as pd
-
-import matplotlib.pyplot as plt
 import matplotlib
-
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
 import os
-
 import cv2
-
 import scipy
 from scipy import signal
-
 import h5py
-
 import time
 import datetime as dt
 from tqdm import tqdm
-
-
 import iminuit
 from iminuit import Minuit, describe
-
 from pprint import pprint # we use this to pretty print some stuff later
-
 import glob
 import sys
-
 sys.path.append('/home/analysis_user/New_trap_code/Tools/')
-
 import BeadDataFile
 from discharge_tools import *
 from AnaUtil import *
-
-
 from joblib import Parallel, delayed
 import multiprocessing
 
 
 
 ### load images in .bmp format
-def load_img_files(path,print_list=True):
+def load_img_files(path,print_list=True,max_files=10000):
+    '''
+    load ".bmp" files from a given path. Sorted by the digits.
+    '''
     # read in the data 
     files = glob.glob(path)
     files.sort(key=lambda f: int(''.join(filter(str.isdigit, f))))    
     img_files = []
-    for i in range(0,len(files)):
+    if(len(files)<max_files):max_files=len(files) # set the maximum to the length
+    for i in range(max_files):
         img_files.append(cv2.imread(files[i],0))
-        if(print_list==True):print(files[i]) 
+        if(print_list==True):print(files[i],i) 
     return img_files
 
-def load_npy_files(path,print_list=True):
+def load_npy_files(path,print_list=True,max_files=10000):
+    '''
+    load ".npy" files from a given path. Sorted by the digits.
+    '''
     files = glob.glob(path)
     files.sort(key=lambda f: int(''.join(filter(str.isdigit, f))))    
     img_files = []
-    for i in range(0,len(files)):
+    if(len(files)<max_files):max_files=len(files) # set the maximum to the length
+    for i in range(max_files):
         img_files.append(np.load(files[i],0))
-        if(print_list==True):print(files[i]) 
+        if(print_list==True):print(files[i],i) 
     return img_files    
 
-def load_dir_reduced_to_height(dirname,file_prefix,max_files):
-    '''
-    
-    '''   
-    ## Load all filenames in directory
-    var_list = []
-    files = []
-    [files.append(file_) for file_ in os.listdir(dirname) if file_.startswith(file_prefix) if file_.endswith('.h5')]
-    files.sort(key=lambda f: int(''.join(filter(str.isdigit, f))))        
-    step_size = 100
-    for j in tqdm(np.arange(0,max_files,step_size)):
-        BDFs = [BDF.BeadDataFile(dirname+filename) for filename in files[j:j+step_size]]
-        [var_list.append(BDFs[k].bead_height) for k in range(len(BDFs))]
-    return var_list
-
 def laplacian(img):
+    '''
+    Calculate the laplacian of an image.
+    '''
     lap = np.sum(cv2.Laplacian(img,cv2.CV_64F)*cv2.Laplacian(img,cv2.CV_64F))
     return lap
 
-def threshold_max(image,threshold):
-    image_to_t = image.transpose()[600:800]
-    ret,thresh = cv2.threshold(image_to_t,threshold,255,0)
+def threshold_max(img,threshold,lower_lim=600,upper_lim=800):
+    '''
+    Get the maximum bin of the thresholded image projected on the y_axis of the image. Sets values above threshold to 255 and below to 0. Uses cv2 method.
+    '''
+    ret,thresh = cv2.threshold(img.transpose()[lower_lim:upper_lim],threshold,255,0)
     return np.argmax(np.mean(thresh,axis=0))
 
 
-def pixel_to_height(pixel,tot=1024,pix_res=4.6,mag=10):
+def pixel_to_height(pixel,tot=1024,pix_res=4.6,mag=10,calibration=False,pix_size_from_calib=0.5):
+    '''
+    Get the height from a camera image in metric units. Pixel size and magnification are necessary as well as the resolution in one direction.
+    '''
     total_pixel = tot # pixel
-    pixel_resolution = pix_res # um
+    pixel_resolution = pix_res # um from camera
     magnification = mag # have to check, whether this is the correct one
-    pixel_per_um = total_pixel*pixel_resolution/magnification
+    if(calibration==False):pixel_per_um = total_pixel*pixel_resolution/magnification
+    if(calibration==True):pixel_per_um = total_pixel * pix_size_from_calib    
     um = pixel_per_um - (pixel_per_um*pixel/total_pixel) # subtract as the 0 is upper left not bottom left corner, total_pixel cancels out, but for educational purpose
     return um
 
-def center_of_mass(image,threshold):
-    ret,thresh = cv2.threshold(image,threshold,255,0)
+def center_of_mass(img,threshold):
+    '''
+    Threshold an image and calculate the center of mass position.
+    '''
+    ret,thresh = cv2.threshold(img,threshold,255,0)
     M = cv2.moments(thresh)
     cX = int(M["m10"] / M["m00"])
     cY = int(M["m01"] / M["m00"])  
     return cX,cY
 
-def gaussian(x,params=list):
-    norm = (1/((1/2*params[2])*np.sqrt(np.pi * 2)))
-    return params[0] * norm * np.exp(-(np.subtract(x,params[1])**2/(2*params[2]**2)))+params[3]
 
-def gaussian_bead_pos_fit(img,axis=0,low_x_lim=630,up_x_lim=700,low_y_lim=420,up_y_lim=550,upper_area=30000,up_lim_width=10):
+def selected_areas_height_comparison(img,threshold,area_low_limits=[500,670,750],area_width=[100,40,100],pixel_or_height="height",plot=True,save_fig=False,output_path="",img_height=1024,color_list=["red","blue","green"]):
+    ret,thresh = cv2.threshold(img,threshold,255,0)
+    projection_list = []
+    for i in range(len(area_low_limits)):
+        projection_list.append(get_height_projection(thresh,low_lim=area_low_limits[i],up_lim=area_low_limits[i]+area_width[i],pixel_or_height=pixel_or_height,plot=plot))
+    if(plot==True):
+        if(pixel_or_height=="height"):plt.xlim(200,300)
+        if(pixel_or_height=="pixel"):plt.xlim(400,600)  
+        plt.show()
+        if(save_fig==True):plt.savefig(output_path+"projection.png",dpi=300,bbox_inches="tight")
+        plt.imshow(thresh)
+        ax = plt.gca()
+        # Add the patch to the Axes
+        for i in range(len(area_low_limits)):
+            p =patches.Rectangle((area_low_limits[i],0), area_width[i], img_height, angle=0.0,fill=False,color=color_list[i])
+            ax.add_patch(p)    
+        if(save_fig==True):plt.savefig(output_path+"selected_areas.png",dpi=300,bbox_inches="tight")
+    return projection_list
+
+
+############## No Notch Filter ################
+def gaussian_bead_pos_fit(img,axis=0,low_x_lim=630,up_x_lim=700,low_y_lim=420,up_y_lim=550,upper_area=30000,up_lim_width=10,img_height=1024,img_width=1280):
+    '''
+    Gausian fit for the non-notch filtered images of the bead either reflected from shield/attractor or bead only
+    '''
+    
+    # re-initialize chisquare, must be a more elegant way. However, no problem encountered so far doing it this way
     def chisquare_1d(function, functionparams, data_x, data_y,data_y_error):
         chisquarevalue=np.sum(np.power(np.divide(np.subtract(function(data_x,functionparams),data_y),data_y_error),2))
         ndf = len(data_y)-len(functionparams)
         #print(ndf)
         return (chisquarevalue, ndf)    
+    
     def chisquare_gaussian(area,mean,sigma,constant):
         return chisquare_1d(function=gaussian,functionparams=[area,mean,sigma,constant],data_x=data_x,data_y=data_y,data_y_error=data_y_error)[0]
     
+    
+    # initialize values
     area=0
     mean=0
     sigma=0
     constant=0
     
+    # pick axis you want to fit
     if(axis==0):
         img2 = img.transpose()
-        data_x = range(1024) # give x data
+        data_x = range(img_height) # give x data
         data_y = np.mean(img2[low_x_lim:up_x_lim],axis=0) # give y data 
         data_y_error = np.sqrt(data_y)+1 # give y uncertainty
-        low_lim_mean = low_y_lim
-        up_lim_mean = up_y_lim
+        low_lim_mean = low_y_lim # derive y limits for fit values
+        up_lim_mean = up_y_lim # derive y limits for fit values        
         
     if(axis==1):
-        data_x = range(1280) # give x data
+        data_x = range(img_width) # give x data
         data_y = np.mean(img[low_y_lim:up_y_lim],axis=0) # give y data 
         data_y_error = np.sqrt(data_y)+1 # give y uncertainty
-        low_lim_mean = low_x_lim
-        up_lim_mean = up_x_lim
+        low_lim_mean = low_x_lim # derive x limits for fit values  
+        up_lim_mean = up_x_lim # derive x limits for fit values  
               
     m=Minuit(chisquare_gaussian, 
              area = 100, # set start parameter
              error_area = 1,
-             limit_area= (0,upper_area), # if you want to limit things
+             limit_area= (0,upper_area), # limit to a value so it does not fit weird things
              #fix_area = "True", # you can also fix it
-             mean = np.argmax(data_y),
+             mean = np.argmax(data_y), # a good start guess in this method is the larges pixel
              error_mean = 1,
              #fix_mean = "False",
-             limit_mean = (low_lim_mean,up_lim_mean),
-             sigma = 15,
+             limit_mean = (low_lim_mean,up_lim_mean), # the mean should be somewhere, where you expect the bead
+             sigma = 5, # the width should be usually within the limits 
              error_sigma = 1,
              limit_sigma=(0,up_lim_width),
              constant = 0,
@@ -154,28 +173,112 @@ def gaussian_bead_pos_fit(img,axis=0,low_x_lim=630,up_x_lim=700,low_y_lim=420,up
     chisquare=m.fval
     return m.values['mean'],m
 
-def show_height_projection(file,low_lim=600,up_lim=700,pixel_or_height="height"):
+def get_height_projection(file,low_lim=600,up_lim=700,pixel_or_height="height",plot=True,img_height=1024,pixel_size=0.503):
+    """
+    Calculate height projection for a given image. Optional you can show the reuslts in pixels or height
+    """
     image = file.transpose()
     z = np.mean(image[low_lim:up_lim],axis=0)
-    if(pixel_or_height=="height"):x= 1024*0.46-np.arange(0,1024*0.46,0.46)
-    elif(pixel_or_height=="pixel"):x=range(1024)
-    plt.plot(x,z)
-    plt.ylabel("mean intensity")
-    if(pixel_or_height=="height"):plt.xlabel("height [um]")
-    elif(pixel_or_height=="pixel"):plt.xlabel("pixel")
-    plt.legend()
-    plt.show()
+    
+    if(plot==True):
+        if(pixel_or_height=="height"):x= img_height*pixel_size-np.arange(0,img_height*pixel_size,pixel_size)
+        elif(pixel_or_height=="pixel"):x=range(img_height)
+        plt.plot(x,z)
+        plt.ylabel("mean intensity")
+        if(pixel_or_height=="height"):plt.xlabel("height [um]")
+        elif(pixel_or_height=="pixel"):plt.xlabel("pixel")
+        plt.legend()
+        #plt.show()  
+        
     return z
 
-def show_height_fit(file,low_x_lim=600,up_x_lim=700,low_y_lim=420,up_y_lim=550,up_lim_width=8,upper_area=30000):
+def get_height_fit(file,low_x_lim=600,up_x_lim=700,low_y_lim=420,up_y_lim=550,up_lim_width=8,upper_area=30000,plot=True,img_height=1024,img_width=1280):
+    '''
+    Return fit function for Gaussian fit of the bead image without notch filter.
+    '''
     img1 = file
     img2 = file.transpose()
-    z = np.mean(img2[low_x_lim:up_x_lim],axis=0)       
-    m=gaussian_bead_pos_fit(img1,axis=0,low_x_lim=low_x_lim,up_x_lim=up_x_lim,low_y_lim=low_y_lim,up_y_lim=up_y_lim,up_lim_width=up_lim_width,upper_area=upper_area)
-    plt.plot(range(1024),gaussian(range(1024),params=[m[1].values["area"],m[1].values["mean"],m[1].values["sigma"],m[1].values["constant"]]),label="fit")
-    plt.plot(range(1024),z,label = "data")
-    plt.xlabel("pixel")
-    plt.ylabel("mean intensity")
-    plt.legend()
-    #plt.show()
+    z = np.mean(img2[low_x_lim:up_x_lim],axis=0)   
+    m = gaussian_bead_pos_fit(img1,axis=0,low_x_lim=low_x_lim,up_x_lim=up_x_lim,low_y_lim=low_y_lim,up_y_lim=up_y_lim,up_lim_width=up_lim_width,upper_area=upper_area,img_height=img_height,img_width=img_width)             
+    if(plot==True):
+        plt.plot(range(img_height),gaussian(range(img_height),params=[m[1].values["area"],m[1].values["mean"],m[1].values["sigma"],m[1].values["constant"]]),label="fit")
+        plt.plot(range(img_height),z,label = "data")
+        plt.xlabel("pixel")
+        plt.ylabel("mean intensity")
+        plt.legend()
+        #plt.show()    
     return m
+
+def gaussian_fit_shadow_height(img,low_x_lim=670,up_x_lim=710,low_y_lim=350,up_y_lim=650,upper_area=3000,up_lim_width=10,img_type="Image"):    
+    def chisquare_1d(function, functionparams, data_x, data_y,data_y_error):
+        chisquarevalue=np.sum(np.power(np.divide(np.subtract(function(data_x,functionparams),data_y),data_y_error),2))
+        ndf = len(data_y)-len(functionparams)
+        #print(ndf)
+        return (chisquarevalue, ndf)    
+    def chisquare_gaussian(area,mean,sigma,constant):
+        return chisquare_1d(function=gaussian,functionparams=[area,mean,sigma,constant],data_x=data_x,data_y=data_y,data_y_error=data_y_error)[0]
+        
+    fit_range_low = 450
+    fit_range_high = 750
+        
+    if(img_type=="Image"):
+        img2 = img.transpose()
+        data_x = np.arange(fit_range_low,fit_range_high,1)
+        data_y = np.mean(img2[low_x_lim:up_x_lim],axis=0)[fit_range_low:fit_range_high] # give y data 
+        constant=255
+    if(img_type=="Projection"): 
+        data_x = np.arange(fit_range_low,fit_range_high,1)
+        data_y = img[fit_range_low:fit_range_high]
+        constant=255
+    if(img_type=="Diff_Projection"): 
+        data_x = range(len(img)) # give x data
+        data_y = img
+        constant = 0
+        
+
+    data_y_error = np.sqrt(np.abs(data_y))+1 # give y uncertainty
+    low_lim_mean = low_y_lim
+    up_lim_mean = up_y_lim
+
+    m=Minuit(chisquare_gaussian, 
+             area = -1000, # set start parameter
+             error_area = 1,
+             limit_area= (-upper_area,-100), # if you want to limit things
+             #fix_area = "False", # you can also fix it
+             mean = 465,
+             error_mean = 1,
+             #fix_mean = "True",
+             limit_mean = (low_lim_mean,up_lim_mean),
+             sigma = 4,
+             error_sigma = 1,
+             limit_sigma=(0,up_lim_width),
+             constant = constant,
+             error_constant = 1,
+             fix_constant="True",
+             errordef = 1,
+             print_level=0)
+    #print('Now proceed with the fit.')
+    m.migrad(ncall=500000)
+    #m.minos(), if you need fancy mapping
+    chisquare=m.fval
+    #print(np.median(data_y))
+    return m
+
+
+def threshold_image(img,lower,upper):
+    img2 = img.copy()
+    mask = (lower < img2) & (img2 < upper)
+    img2[mask] = 255
+    img2[~mask] = 0
+    return img2
+
+def from_shadow_image_to_height(image,threshold,area_low_limits=[670,730],area_widths=[40,70]):
+    thresh = threshold_image(image.copy(),threshold,256)
+    img = thresh.transpose()
+    z1 = np.mean(img[area_low_limits[0]:area_low_limits[0]+area_widths[0]],axis=0)
+    z2 = np.mean(img[area_low_limits[1]:area_low_limits[1]+area_widths[1]],axis=0)
+    fit_img = z1-z2
+    m = gaussian_fit_shadow_height(fit_img,low_y_lim=350,up_y_lim=650,upper_area=3000,up_lim_width=10,img_type="Diff_Projection")
+    # height =  pixel_to_height(m.values["mean"],calibration=calibration)        
+    return m.values["mean"] # in pixels
+

@@ -29,9 +29,14 @@ import multiprocessing
 # basic functions and cost functions
 
 # for use the example notebook in New_Trap_Code/Scripts
+
 def gaussian(x,params=list):
+    '''
+    Generic defintion of a Gaussian
+    '''
     norm = (1/((1/2*params[2])*np.sqrt(np.pi * 2)))
     return params[0] * norm * np.exp(-(np.subtract(x,params[1])**2/(2*params[2]**2)))+params[3]
+
 
 def chisquare_1d(function, functionparams, data_x, data_y,data_y_error):
     chisquarevalue=np.sum(np.power(np.divide(np.subtract(function(data_x,functionparams),data_y),data_y_error),2))
@@ -73,51 +78,6 @@ def voltage_to_x_position(voltage,slope=0.019834000085488412,offset=-0.001500031
 def extract_freq_and_stroke(cant_pos_y):
     stroke = voltage_to_x_position(np.std(cant_pos_y)*np.sqrt(2))
     return 2*stroke
-
-def get_temperature_and_pressure(dates):
-#         if(i<12):
-#             am_or_pm="AM"
-#         if(i>=12):    
-#             am_or_pm="PM"  # OLDFORMAT before 20191121
-#         if(i==0):
-#             i = i+12
-#         if(i>12):
-#             i = (i-12)
-
-
-# x_value = (np.arange(13,24,1/(60*60)))
-#plt.plot(s)
-#plt.ylabel("Temperature [C]",fontsize=24)
-#plt.xlabel("seconds",fontsize=24)
-#plt.xticks(fontsize=16)
-#plt.yticks(fontsize=16)
-#plt.savefig("s_temperature_cycle_new_201391125_0_9.png", dpi = 250, bbox_inches ="tight")
-
-    airtemperature_list, surfacetemperature_list, pressure_list, f=([] for i in range(4))
-    for date in dates:
-        print(date)
-        for i in np.arange(0,24):
-            try:
-                if(i<10):
-                    hour = "0%d" %i
-                if(i>9):
-                    hour ="%d" %i
-                f.append(h5py.File("/data/SC_data/TemperatureAndPressure%s/TempAndPressure%s_%s.hdf5" %(date,date,hour), mode='r+'))
-            except:
-                print("%s hour at %s is not on record" %(i,date))
-                continue       
-    for i in np.arange(0,len(f),1):
-        try: 
-            None
-            airtemperature_list.extend(list(f[i]["AirTemperature/AirTemperatures"]))
-            surfacetemperature_list.extend(list(f[i]["SurfaceTemperature/SurfaceTemperatures"]))
-            pressure_list.extend(list(f[i]["Pressure/Pressures"]))
-        except:
-            continue
-    #print(lst_dict_temp)        
-    #df.append(lst_dict_temp)       
-    [f_.close() for f_ in f] ## good programing       
-    return airtemperature_list,surfacetemperature_list, pressure_list
 
 
 # extract the harmonics and a sideband for a given data set with a given frequency, also able to pick the side bands properly
