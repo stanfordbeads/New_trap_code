@@ -40,7 +40,24 @@ def load_dir_reduced_to_time(dirname,file_prefix,max_files):
         #[var_list.append(dt.datetime.fromtimestamp(BDFs[k].time[0]/1e9)) for k in range(len(BDFs))]
     return var_list
 
-def load_dir_reduced_to_height(dirname,file_prefix,max_files):
+def load_dir_reduced_to_attr_pos(dirname,file_prefix,max_files):
+    '''
+    Load time information from the h5 files in a loop into a list. Step size is fixed to 100. 
+    '''   
+    ## Load all filenames in directory
+    var_list = []
+    files = []
+    [files.append(file_) for file_ in os.listdir(dirname) if file_.startswith(file_prefix) if file_.endswith('.h5')]
+    files.sort(key=lambda f: int(''.join(filter(str.isdigit, f))))        
+    step_size = 100
+    for j in tqdm(np.arange(0,max_files,step_size)):
+        BDFs = [BDF.BeadDataFile(dirname+filename) for filename in files[j:j+step_size]]
+        [var_list.append(np.mean(BDFs[k].cant_pos[2])) for k in range(len(BDFs))]
+        #[var_list.append(dt.datetime.fromtimestamp(BDFs[k].time[0]/1e9)) for k in range(len(BDFs))]
+    return var_list
+
+
+def load_dir_reduced_to_heights(dirname,file_prefix,max_files):
     '''
     Load height information from the h5 files in a loop into a list. Step size is fixed to 100. 
     '''   
@@ -64,12 +81,10 @@ def environment_processor(year,month,day,bead_date="20200320",bead_number=1,no_b
     if(no_bead==False):
         # Create folders for new data. Sometimes a permission problem occurs, solvable by chmod 777 from root.
     
-        basic_folder = "/data/new_trap_processed/processed_files/%s" %(bead_date)
-        output_folder =  basic_folder + "/Bead%d/%s" %(bead_number,date)
-        try: os.mkdir(basic_folder)
+        basic_folder = "/data/new_trap_processed/processed_files/%s/Bead%s/EnvData/" %(bead_date,bead_number)
+        output_folder =  basic_folder + "%s" %(date)
+        try: os.makedirs(basic_folder)
         except: print("Did not create %s. It may exist or you do not have perimissions." %basic_folder)
-        try: os.mkdir(basic_folder +"/Bead%d" %bead_number)
-        except: print("Did not create bead folder. It may exist or you do not have perimissions.")
         try: os.mkdir(output_folder)
         except: print("Did not create output folder:%s. It may exist or you do not have perimissions."% output_folder)
     
@@ -112,6 +127,7 @@ def environment_processor(year,month,day,bead_date="20200320",bead_number=1,no_b
     if(os.path.isfile(processed_file_name)==False):
         #df.to_csv(processed_file_name.replace(".pkl",".csv"),index=False) ## comment back in if you want a .csv for whatever reason
         df.to_pickle(processed_file_name) 
+    else: print("Environmental file %s exists already" %processed_file_name)    
     return df
 
 def run_environment_processor_batch(year,month,day_start,day_end,bead_date,bead_number=1):
@@ -133,3 +149,23 @@ def run_environment_processor_batch(year,month,day_start,day_end,bead_date,bead_
     for year,month,day in tqdm(dataset_list_T):
         environment_processor(year,month,day,str(bead_date),bead_number)
     return print("Done")
+
+def match_environmental_data(df,fn):
+    '''
+    Given a dataframe (df) of heights, one gets the matching environmental data of a list of filenames (fn). If timestamps are to far off a warning will be triggered 
+    '''
+    df_temp_list = []
+    df_temp_list.extend([pd.read_pickle(f) for f in fn]) # read the files in
+    df_temp = pd.concat([df_tempi for df_tempi in df_temp_list]).reset_index() # merge the dataframes, you can merge as much as you want since later the time stamps are anyway used. But maybe stay efficient, will ya?
+    airt,surf,pressure,values = [[] for i in range(4)]
+    for elements in tqdm(range(len(df))): # fun fact: faster than all the possible apply methods. Tried a lot but this is best. DO NOT PARLLELIZE with joblib
+        values = df_temp.iloc[(df_temp['Time_Epoch']-df["Time_Epoch"][elements]).abs().argsort()[:1]][['AirTemperature', 'SurfaceTemperature','Pressure','Time_Epoch']].values[0]   # this one subtracts the time_epoch of the data set from the entire column and gets the minimum. Afterwards it adds it if the time difference is less than 10 seconds.
+        if(np.abs(values[3]-df["Time_Epoch"][elements])<10):
+            airt.append(values[0])
+            surf.append(values[1])
+            pressure.append(values[2])
+        else:print("Time difference is to big!")
+    df["AirTemperature"] = airt
+    df["SurfaceTemperature"] = surf
+    df["Pressure"] = pressure
+    return df # get your dataframe back with environmental data
