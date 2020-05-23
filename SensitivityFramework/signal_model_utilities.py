@@ -1,4 +1,3 @@
-
 # coding: utf-8
 
 # ### Notebook to create the utility file for the signal model input ###
@@ -17,6 +16,9 @@ sep_list = np.arange(0.0e-6,100e-6,0.5e-6)
 height_list = np.arange(-15.0e-6,15.0e-6,0.5e-6)
 size_list = np.asarray([2.4e-6,3.8e-6])
 ### define functions
+
+
+
 
 
 def take_closest(myList, myNumber):

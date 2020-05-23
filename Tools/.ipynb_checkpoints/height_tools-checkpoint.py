@@ -16,10 +16,10 @@ from iminuit import Minuit, describe
 from pprint import pprint # we use this to pretty print some stuff later
 import glob
 import sys
-sys.path.append('/home/analysis_user/New_trap_code/Tools/')
+#sys.path.append('/home/analysis_user/New_trap_code/Tools/')
 import BeadDataFile
 from discharge_tools import *
-from AnaUtil import *
+from analysis_tools import *
 from joblib import Parallel, delayed
 import multiprocessing
 
