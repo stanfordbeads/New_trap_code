@@ -191,7 +191,7 @@ def spin_processor(bead_date,bead_number,dataset,run,max_files):
     dirname ="/data/new_trap/" + str(bead_date) + "/Bead%s/" %bead_number +dataset
     fsamp = 5000 
     res = fsamp
-    spin_time = load_dir_reduced_to_spin(dirname,dateset,run,max_files)
+    spin_time = load_dir_reduced_to_spin(dirname,run,max_files)
     df_spin = pd.DataFrame()
     df_spin["spin_time"] = spin_time
     a_list = []
@@ -204,10 +204,13 @@ def spin_processor(bead_date,bead_number,dataset,run,max_files):
     return df_spin
 
 
-def harmonics_processor_input(bead_date,bead_number,dataset,run,start_file=0,max_file=5,no_harmonics=10,res=5000,res_factor=10,save_file=True):
+def harmonics_processor_input(bead_date,bead_number,dataset,run,start_file=0,max_file=5,no_harmonics=10,res=5000,save_file=True):
     path="/harmonics/"
     dirname ="/data/new_trap/" + str(bead_date) + "/Bead%s/" %bead_number +dataset
+    max_input_length = get_max_file_length(dirname, file_prefix = run)
     files = load_dir_sorted(dirname, run,start_file=start_file,  max_file=max_file)
+    if(start_file+max_file>max_input_length):
+        return print("The file number you specficed exeeds the maximum.")
     fsamp = files[0].fsamp
     shake_freq = int(files[0].cant_freq)
     harmonic_list_x, sideband_list_x, phase_list_x, sidephase_list_x =([] for i in range(4))
@@ -220,7 +223,7 @@ def harmonics_processor_input(bead_date,bead_number,dataset,run,start_file=0,max
     stroke_list = []
     x_feedback_list,y_feedback_list,z_feedback_list = ([] for i in range(3))
     
-    for i in tqdm(np.arange(0,len(files),1)):
+    for i in np.arange(0,len(files),1):
         #print(files[i].fname)
         data = files[i].xyz2
         
@@ -257,8 +260,8 @@ def harmonics_processor_input(bead_date,bead_number,dataset,run,start_file=0,max
 
         
         _,phases_x,sidephases_x = get_harmonics_with_sideband(FFT_and_phases[3],shake_freq=shake_freq,no_harmonics=no_harmonics)
-        _,phases_y,sidephases_y = get_harmonics_with_sideband(FFT_and_phases[3],shake_freq=shake_freq,no_harmonics=no_harmonics)# should be 4?
-        _,phases_z,sidephases_z = get_harmonics_with_sideband(FFT_and_phases[3],shake_freq=shake_freq,no_harmonics=no_harmonics)# should be 5?
+        _,phases_y,sidephases_y = get_harmonics_with_sideband(FFT_and_phases[4],shake_freq=shake_freq,no_harmonics=no_harmonics)# should be 4?
+        _,phases_z,sidephases_z = get_harmonics_with_sideband(FFT_and_phases[5],shake_freq=shake_freq,no_harmonics=no_harmonics)# should be 5?
         
         phase_list_x.append(phases_x)
         phase_list_y.append(phases_y)
@@ -308,22 +311,52 @@ def harmonics_processor_input(bead_date,bead_number,dataset,run,start_file=0,max
     df["z_feedback"] = z_feedback_list
     
     if(save_file==True):
-        base_proc = "/data/new_trap_processed/processed_files/" + str(bead_date) +  "/Bead%s/" %bead_number
-        dataset = file_prefix
-        try:
-            os.makedirs(base_proc+dataset)        
-            print("Created subdirs %s" %dataset)
-        except: 
-            print("Folder exists or you do not have permissions")
-        processed_file_name = base_proc + dataset +  "_main.pkl" 
-        if(os.path.isfile(processed_file_name)==False):
-            df.to_pickle(processed_file_name)
-            df.to_csv(processed_file_name.replace(".pkl",".csv"),index=False)
-            print(processed_file_name)
-        else:
-            print("Processed file could not be saved, probably exists.")
+        save_processed_file(df,bead_date=bead_date,bead_number=bead_number,dataset=dataset,run=run,process_type="main",create_csv=True)
     return df
 
+def save_processed_file(df,bead_date,bead_number,dataset,run,process_type="main",create_csv=False):
+    base_proc = "/data/new_trap_processed/processed_files/" + str(bead_date) +  "/Bead%s/" %bead_number
+    try:
+        os.makedirs(base_proc+dataset)        
+        print("Created subdirs %s" %dataset)
+    except: 
+        print("Folder exists or you do not have permissions")
+    processed_file_name = base_proc + dataset +  run + "_%s.pkl" %process_type 
+    if(os.path.isfile(processed_file_name)==False):
+        df.to_pickle(processed_file_name)
+        if(create_csv==True):
+            df.to_csv(processed_file_name.replace(".pkl",".csv"),index=False)
+        print(processed_file_name)
+    else:
+        print("Processed file could not be saved, probably exists.")
+    return None
+
+def get_max_file_length(dirname, file_prefix = 'Discharge'):
+    ''' Load all files in directory to a list of BeadDataFile
+        INPUTS: dirname, directory name
+        max_file, maximum number of files to read'''
+        
+    ## Load all filenames in directory
+    files = []
+    [files.append(file_) for file_ in os.listdir(dirname) if file_.startswith(file_prefix) if file_.endswith('.h5')]
+    files.sort(key=lambda f: int(''.join(filter(str.isdigit, f))))   
+    return len(files)
+
+
+def loop_run_harmonics_processor(bead_date,bead_number,dataset,run,start_file,max_file,no_harmonics=10,res=5000,save_file=True):    
+    df_tot = pd.DataFrame()
+    start_file = start_file
+    end_file = max_file
+    step_size=100
+    for i in tqdm(np.arange(start_file,end_file,step_size)):
+        try:
+            df_temp = pd.DataFrame()
+            df_temp = harmonics_processor_input(bead_date,bead_number,dataset,run,i,step_size,no_harmonics,res,save_file=False)
+            df_tot = pd.concat([df_tot,df_temp],ignore_index=True)
+        except: print("The -%d-th file did not work. Maybe your specified max_file is longer than the datasets" %end_file)        
+    if(save_file==True):
+        save_processed_file(df_tot,bead_date=bead_date,bead_number=bead_number,dataset=dataset,run=run,process_type="main",create_csv=True)
+    return df_tot
 
 
 ''' NOT IN USE ANYMORE

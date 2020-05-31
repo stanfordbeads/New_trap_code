@@ -209,7 +209,7 @@ def get_height_fit(file,low_x_lim=600,up_x_lim=700,low_y_lim=420,up_y_lim=550,up
         #plt.show()    
     return m
 
-def gaussian_fit_shadow_height(img,low_x_lim=670,up_x_lim=710,low_y_lim=350,up_y_lim=650,upper_area=3000,up_lim_width=10,img_type="Image"):    
+def gaussian_fit_shadow_height(img,low_x_lim=670,up_x_lim=710,low_y_lim=400,up_y_lim=750,upper_area=3000,up_lim_width=10,img_type="Image"):    
     def chisquare_1d(function, functionparams, data_x, data_y,data_y_error):
         chisquarevalue=np.sum(np.power(np.divide(np.subtract(function(data_x,functionparams),data_y),data_y_error),2))
         ndf = len(data_y)-len(functionparams)
@@ -218,8 +218,8 @@ def gaussian_fit_shadow_height(img,low_x_lim=670,up_x_lim=710,low_y_lim=350,up_y
     def chisquare_gaussian(area,mean,sigma,constant):
         return chisquare_1d(function=gaussian,functionparams=[area,mean,sigma,constant],data_x=data_x,data_y=data_y,data_y_error=data_y_error)[0]
         
-    fit_range_low = 450
-    fit_range_high = 750
+    fit_range_low = low_y_lim
+    fit_range_high = up_y_lim
         
     if(img_type=="Image"):
         img2 = img.transpose()
@@ -287,3 +287,74 @@ def from_shadow_image_to_height(image,threshold,area_low_limits=[670,730],area_w
     # height =  pixel_to_height(m.values["mean"],calibration=calibration)        
     return m.values["mean"],m # in pixels
 
+
+# add tools for the Y position
+
+def gaussian_fit_shadow_width(img,low_x_lim=670,up_x_lim=710,low_y_lim=350,up_y_lim=650,upper_area=3000,up_lim_width=10,img_type="Image"):    
+    def chisquare_1d(function, functionparams, data_x, data_y,data_y_error):
+        chisquarevalue=np.sum(np.power(np.divide(np.subtract(function(data_x,functionparams),data_y),data_y_error),2))
+        ndf = len(data_y)-len(functionparams)
+        #print(ndf)
+        return (chisquarevalue, ndf)    
+    def chisquare_gaussian(area,mean,sigma,constant):
+        return chisquare_1d(function=gaussian,functionparams=[area,mean,sigma,constant],data_x=data_x,data_y=data_y,data_y_error=data_y_error)[0]
+        
+
+    fit_range_low = low_x_lim
+    fit_range_high = up_x_lim
+        
+    if(img_type=="Image"):
+        data_x = np.arange(0,1280,1)
+        data_y = np.mean(img[low_y_lim:up_y_lim],axis=0)# give y data 
+        constant=255
+    if(img_type=="Projection"): 
+        data_x = np.arange(fit_range_low,fit_range_high,1)
+        data_y = img[fit_range_low:fit_range_high]
+        constant=255
+    if(img_type=="Diff_Projection"): 
+        data_x = range(len(img)) # give x data
+        data_y = img
+        constant = 0
+        
+    data_y_error = np.sqrt(np.abs(data_y))+1 # give y uncertainty
+    low_lim_mean = low_y_lim
+    up_lim_mean = up_y_lim
+
+    m=Minuit(chisquare_gaussian, 
+             area = -1000, # set start parameter
+             error_area = 1,
+             limit_area= (-upper_area,-100), # if you want to limit things
+             #fix_area = "False", # you can also fix it
+             mean = 30,
+             error_mean = 1,
+             #fix_mean = "True",
+             limit_mean = (low_lim_mean,up_lim_mean),
+             sigma = 4,
+             error_sigma = 1,
+             limit_sigma=(0,up_lim_width),
+             constant = 0,
+             error_constant = 1,
+             fix_constant="False",
+             errordef = 1,
+             print_level=0)
+    #print('Now proceed with the fit.')
+    m.migrad(ncall=500000)
+    #m.minos(), if you need fancy mapping
+    chisquare=m.fval
+    #print(np.median(data_y))
+    return m
+
+def from_shadow_image_to_width(image,threshold,area_low_limits=[650,750],area_width=70,flb=0,fub=70,area_max=3000,width_max=5,plot=False):
+    thresh = threshold_image(image.copy(),threshold,256)
+    img = thresh
+    z1 = np.mean(img[430:520],axis=0)[area_low_limits[0]:area_low_limits[0]+area_width]
+    #plt.plot(z1)
+    z2 = np.mean(img[430:520],axis=0)[area_low_limits[1]:area_low_limits[1]+area_width]
+    fit_img = z1-z2
+    m = gaussian_fit_shadow_width(fit_img,low_y_lim=flb,up_y_lim=fub,upper_area=area_max,up_lim_width=width_max,img_type="Diff_Projection",)
+    #print(m.values["area"],m.values["mean"],m.values["sigma"],m.values["constant"])
+    if(plot==True):
+        plt.plot(fit_img)
+        plt.plot(range(area_width),gaussian(range(area_width),params=[m.values["area"],m.values["mean"],m.values["sigma"],m.values["constant"]]),label="fit")
+#plt.xlim(m.values["mean"]-100,m.values["mean"]+100)
+    return m.values["mean"],m

@@ -9,7 +9,9 @@ import sys, time
 
 import BeadDataFile as BDF
 
-
+import sys
+sys.path.append('/home/analysis_user/New_trap_code/Tools/StatFramework/')
+from likelihood_calculator import likelihood_analyser
 
 def load_dir(dirname, file_prefix = 'Discharge', start_file=0, max_file=500):
     ''' Load all files in directory to a list of BeadDataFile
@@ -40,10 +42,8 @@ def load_dir_sorted(dirname, file_prefix = 'Discharge',start_file=0, max_file=50
     files.sort(key=lambda f: int(''.join(filter(str.isdigit, f))))    
     # Load data into a BeadDataFile list
     BDFs = [BDF.BeadDataFile(dirname+filename) for filename in files[start_file:start_file+max_file]]
-    
     print(len(files),' files in folder')
     print(len(BDFs),' files loaded')
-    
     return BDFs
 
 
@@ -103,4 +103,24 @@ def correlation(drive, response, fsamp, fdrive, filt = False, band_width = 1):
 
     return corr * (1.0 / (lentrace * drive_amp))
 
+def build_z_response_discharge(bdf_list, drive_freq, bandwidth=1, decimate=10, phase=0.2, fix_phase=False):
+    la = likelihood_analyser.LikelihoodAnalyser()
+    fit_kwargs = {'A': 0, 'f': drive_freq, 'phi': phase,
+        'error_A': 1, 'error_f': 1, 'error_phi': 0.5, 'errordef': 1,
+        'limit_phi': [-np.pi, np.pi],
+        'limit_A': [-10000, 10000],
+        'print_level': 0, 'fix_f': True, 'fix_phi': fix_phase}
+    
+    m1_list = []
+    for bb in bdf_list:                        
+        frequency = fit_kwargs['f']
+        xx2 = bb.response_at_freq2('z', frequency, bandwidth=bandwidth)
+        xx2 = xx2[5000:-5000:decimate]  # cut out the first and last second
+
+        m1_tmp = la.find_mle_sin(xx2, fsamp = 5000 / decimate, noise_rms=1, **fit_kwargs)
+        m1_list.append(m1_tmp)
+    phases = np.array([m1_.values[2] for m1_ in m1_list])
+    amps = np.array([m1_.values[0] for m1_ in m1_list])
+                                                                            
+    return amps, phases
 
