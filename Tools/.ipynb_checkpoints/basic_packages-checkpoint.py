@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import matplotlib
 from matplotlib.colors import LogNorm
 import matplotlib.patches as patches
+import gif
 
 import os
 

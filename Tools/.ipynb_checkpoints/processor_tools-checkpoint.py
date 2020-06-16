@@ -32,7 +32,8 @@ def load_dir_reduced_to_spin(dirname,file_prefix,max_files):
     var_list = []
     files = []
     [files.append(file_) for file_ in os.listdir(dirname) if file_.startswith(file_prefix) if file_.endswith('.h5')]
-    files.sort(key=lambda f: int(''.join(filter(str.isdigit, f))))        
+    files.sort(key=lambda f: int(''.join(filter(str.isdigit, f))))
+    print(len(files))
     step_size = 50
     for j in tqdm(np.arange(0,max_files,step_size)):
         BDFs = [BDF.BeadDataFile(dirname+filename) for filename in files[j:j+step_size]]
@@ -357,6 +358,21 @@ def loop_run_harmonics_processor(bead_date,bead_number,dataset,run,start_file,ma
     if(save_file==True):
         save_processed_file(df_tot,bead_date=bead_date,bead_number=bead_number,dataset=dataset,run=run,process_type="main",create_csv=True)
     return df_tot
+
+
+def reduced_df(df_in,parameter=["x_mean","y_mean","z_mean","amplitude_x","amplitude_y","amplitude_z","phase_x","phase_y","phase_z"],frequency=3,no_harmonics=15):
+    df_red = pd.DataFrame()
+    for elements in tqdm(parameter):
+        if(df_in["%s" %elements].dtype=="O"):
+            for j in range(no_harmonics):
+                list_temp = []
+                for k in range(len(df_in)):
+                    list_temp.append(df_in["%s" %elements][k][j])
+                df_red["%s_%d" %(elements,j*frequency+frequency)] = list_temp 
+        elif(df_in["%s" %elements].dtype=="float64"):
+            df_red["%s" %(elements)] = df_in["%s" %elements]
+    df_red=df_red.reset_index()
+    return df_red
 
 
 ''' NOT IN USE ANYMORE
