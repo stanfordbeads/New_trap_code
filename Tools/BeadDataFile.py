@@ -84,6 +84,10 @@ class BeadDataFile:
         high = np.uint32(pos_data.reshape(-1,11).T[9])
         low = np.uint32(pos_data.reshape(-1,11).T[10])
         self.time = (high.astype(np.uint64) << np.uint64(32)) + low.astype(np.uint64)
+        try:
+            self.Iz = np.array(f['laser_power'])
+        except:
+            print('No laser power data')
 
 
         #loads time at end of file

@@ -24,6 +24,24 @@ from height_tools import *
 from joblib import Parallel, delayed
 import multiprocessing
 
+
+def load_dir_reduced_to_qpd_sum(dirname,file_prefix,max_files):
+    '''
+    Load time information from the h5 files in a loop into a list. Step size is fixed to 100. 
+    '''   
+    ## Load all filenames in directory
+    var_list = []
+    files = []
+    [files.append(file_) for file_ in os.listdir(dirname) if file_.startswith(file_prefix) if file_.endswith('.h5')]
+    files.sort(key=lambda f: int(''.join(filter(str.isdigit, f))))
+    print(len(files))
+    step_size = 50
+    for j in tqdm(np.arange(0,max_files,step_size)):
+        BDFs = [BDF.BeadDataFile(dirname+filename) for filename in files[j:j+step_size]]
+        [var_list.append(BDFs[k].quad_sum) for k in range(len(BDFs))]
+        #[var_list.append(dt.datetime.fromtimestamp(BDFs[k].time[0]/1e9)) for k in range(len(BDFs))]
+    return var_list
+
 def load_dir_reduced_to_spin(dirname,file_prefix,max_files):
     '''
     Load time information from the h5 files in a loop into a list. Step size is fixed to 100. 
@@ -188,9 +206,9 @@ def match_environmental_data(df,fn):
     df["Pressure"] = pressure
     return df # get your dataframe back with environmental data
 
-def spin_processor(bead_date,bead_number,dataset,run,max_files):
+def spin_processor(bead_date,bead_number,dataset,run,max_files,fsamp):
     dirname ="/data/new_trap/" + str(bead_date) + "/Bead%s/" %bead_number +dataset
-    fsamp = 5000 
+    fsamp = fsamp 
     res = fsamp
     spin_time = load_dir_reduced_to_spin(dirname,run,max_files)
     df_spin = pd.DataFrame()
@@ -354,7 +372,7 @@ def loop_run_harmonics_processor(bead_date,bead_number,dataset,run,start_file,ma
             df_temp = pd.DataFrame()
             df_temp = harmonics_processor_input(bead_date,bead_number,dataset,run,i,step_size,no_harmonics,res,save_file=False)
             df_tot = pd.concat([df_tot,df_temp],ignore_index=True)
-        except: print("The -%d-th file did not work. Maybe your specified max_file is longer than the datasets" %end_file)        
+        except: print("The -%d-th file did not work. Maybe your specified max_file is longer than the datasets" %j)        
     if(save_file==True):
         save_processed_file(df_tot,bead_date=bead_date,bead_number=bead_number,dataset=dataset,run=run,process_type="main",create_csv=True)
     return df_tot
