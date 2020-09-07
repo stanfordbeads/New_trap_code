@@ -1,0 +1,16 @@
+The fit parameters for spin,x are determined as:
+z = 43.850 +/- 0.005
+w = 2.997 +/- 0.000
+The reduced chi2 is at: 76614
+The fit parameters for spin,y are determined as:
+z = 38.094 +/- 0.010
+w = 2.926 +/- 0.001
+The reduced chi2 is at: 4540
+The fit parameters for qpd,x are determined as:
+z = 21.632 +/- 0.008
+w = 3.698 +/- 0.001
+The reduced chi2 is at: 5649
+The fit parameters for qpd,y are determined as:
+z = 50.404 +/- 0.013
+w = 3.353 +/- 0.001
+The reduced chi2 is at: 1903

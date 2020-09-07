@@ -74,6 +74,7 @@ class BeadDataFile:
         ## [x_lf_2, y_lf_2, x_lf, y_lf, z_lf, sync, x_fb, y_fb, z_fb, time1, time2]
         self.xyz = pos_data.reshape(-1,11).T[2:5]
         self.feedback = pos_data.reshape(-1,11).T[6:9]
+        self.trigger = pos_data.reshape(-1,11).T[5]
         #placeholders for later analysis
         self.diag_pos_data = []
         self.cant_data = []

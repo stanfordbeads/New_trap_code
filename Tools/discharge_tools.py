@@ -6,7 +6,7 @@ import scipy.optimize as optimize
 
 import os, fnmatch
 import sys, time
-
+from tqdm import tqdm
 import BeadDataFile as BDF
 
 import sys
@@ -24,7 +24,7 @@ def load_dir(dirname, file_prefix = 'Discharge', start_file=0, max_file=500):
     files.sort(key=lambda ff: int(os.path.splitext(ff)[0].split('_')[-1])) ## sort by index
 
     # Load data into a BeadDataFile list
-    BDFs = [BDF.BeadDataFile(dirname+filename) for filename in files[start_file:start_file+max_file]]
+    BDFs = [BDF.BeadDataFile(dirname+filename) for filename in tqdm(files[start_file:start_file+max_file])]
 
     print(len(files),' files in folder')
     print(len(BDFs),' files loaded')

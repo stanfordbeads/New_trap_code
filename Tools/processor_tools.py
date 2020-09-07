@@ -76,24 +76,8 @@ def load_dir_reduced_to_time(dirname,file_prefix,max_files):
         #[var_list.append(dt.datetime.fromtimestamp(BDFs[k].time[0]/1e9)) for k in range(len(BDFs))]
     return var_list
 
-def load_dir_reduced_to_attr_pos(dirname,file_prefix,max_files):
-    '''
-    Load time information from the h5 files in a loop into a list. Step size is fixed to 100. 
-    '''   
-    ## Load all filenames in directory
-    var_list = []
-    files = []
-    [files.append(file_) for file_ in os.listdir(dirname) if file_.startswith(file_prefix) if file_.endswith('.h5')]
-    files.sort(key=lambda f: int(''.join(filter(str.isdigit, f))))        
-    step_size = 100
-    for j in tqdm(np.arange(0,max_files,step_size)):
-        BDFs = [BDF.BeadDataFile(dirname+filename) for filename in files[j:j+step_size]]
-        [var_list.append(np.mean(BDFs[k].cant_pos[2])) for k in range(len(BDFs))]
-        #[var_list.append(dt.datetime.fromtimestamp(BDFs[k].time[0]/1e9)) for k in range(len(BDFs))]
-    return var_list
 
-
-def load_dir_reduced_to_heights(dirname,file_prefix,max_files):
+def load_dir_reduced_to_height(dirname,file_prefix,max_files):
     '''
     Load height information from the h5 files in a loop into a list. Step size is fixed to 100. 
     '''   
@@ -290,7 +274,7 @@ def harmonics_processor_input(bead_date,bead_number,dataset,run,start_file=0,max
         sidephase_list_y.append(sidephases_y)
         sidephase_list_z.append(sidephases_z)
 
-
+        
     # make the dataframe and fill it
     df = pd.DataFrame()
     

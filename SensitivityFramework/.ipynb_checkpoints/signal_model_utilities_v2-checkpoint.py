@@ -18,24 +18,25 @@ def force_vs_position(x_sep,height_sep,lambda_val,axis="X",yuk_or_grav="yuk",bea
     yuk_or_grav = "yuk" or "grav", first is what you want
     bead_size = available are 4.6 and 7.6
     '''
-    yuklambda = lambda_val
+    yuklambda = lambda_val*1e-6
     bs_ff = [int(i) for i in str(bead_size) if i.isdigit()]
-    print(bs_ff)
+    ##print(bs_ff)
     theory_data_dir = "/data/new_trap/simulation/results/%d_%dum-gbead_1um_unit_cells/" %(bs_ff[0],bs_ff[1])
     gfuncs_class = gu.GravFuncs(theory_data_dir)
     lambind = np.argmin(np.abs(gfuncs_class.lambdas - yuklambda))
+    print(lambind,gfuncs_class.lambdas[lambind])
     ax_dict = {'X':0, "x":0, 'Y':1, 'y':1, 'Z':2,'z':2}
     ones = np.ones_like(posvec)
     pts = np.stack((x_sep*ones, posvec, height_sep*ones), axis=-1)
     #for resp in [0,1,2]:
     if(yuk_or_grav=="yuk"):
-        force_vec = gfuncs_class.yukfuncs[ax_dict[axis]][lambind](pts*1.0e-6)
+        forcevec = gfuncs_class.yukfuncs[ax_dict[axis]][lambind](pts*1.0e-6)
         print("Loaded Yukawa Force")
     elif(yuk_or_grav=="grav"):
-        force_vec = gfuncs_class.gfuncs[ax_dict[axis]][lambind](pts*1.0e-6)
+        forcevec = gfuncs_class.gfuncs[ax_dict[axis]][lambind](pts*1.0e-6)
         print("Loaded Gravity Force")
     else: print("Pick a valid option, yuk or grav!")
-    return posvec,force_vec
+    return posvec,forcevec
 
 # sine
 def position_at_time_sin_function(stroke,time,frequency,offset_y=0): 
@@ -57,6 +58,6 @@ def force_vs_time(x_sep,height_sep,stroke,frequency,axis,lambda_val,offset_y=0,y
     '''
     This gives the force as a function of time for a sinusoidial movement in the y-direction. The time parameter is a second sampled with 5kHz.
     '''
-    p,f = force_vs_position(x_sep,height_sep,lambda_val,axis="Z",yuk_or_grav=yuk_or_grav,bead_size=bead_size)
+    p,f = force_vs_position(x_sep,height_sep,lambda_val,axis=axis,yuk_or_grav=yuk_or_grav,bead_size=bead_size)
     force = alpha * force_at_a_time_sin_function(stroke,time,frequency,p,f,offset_y=offset_y)
     return time,force

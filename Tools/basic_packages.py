@@ -5,6 +5,11 @@ import matplotlib.pyplot as plt
 import matplotlib
 from matplotlib.colors import LogNorm
 import matplotlib.patches as patches
+
+
+from matplotlib import mlab as mlab
+from matplotlib.mlab import psd
+
 import gif
 
 import os

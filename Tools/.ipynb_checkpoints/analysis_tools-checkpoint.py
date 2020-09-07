@@ -47,9 +47,18 @@ def chisquare_1d(function, functionparams, data_x, data_y,data_y_error):
 def chisquare_gaussian(area,mean,sigma,constant):
     return chisquare_1d(function=gaussian,functionparams=[area,mean,sigma,constant],data_x=data_x,data_y=data_y,data_y_error=data_y_error)[0]
 
+def chisquare_gaussian_test(area,mean,sigma,constant,data_x,data_y,data_y_error):
+    return chisquare_1d(function=gaussian,functionparams=[area,mean,sigma,constant],data_x=data_x,data_y=data_y,data_y_error=data_y_error)[0]
+
+
 def chisquare_linear(a,b):
     return chisquare_1d(function=linear,functionparams=[a,b],data_x=data_x,data_y=data_y,data_y_error=data_y_error)[0]
 
+
+# calibration of the au into power as shown by Akio on 20200707
+def au_to_power (x,p0 = -0.02715,p1 = -1.437e-5):
+    power_mW = x*p1 + p0
+    return power_mW
 
 # calibration of the voltage - position conversion
 
@@ -109,6 +118,10 @@ def voltage_to_z_position(voltage,slope=0.1,offset=0.0,redo=False):
 def estimate_stroke(cant_pos_y):
     stroke = voltage_to_x_position(np.std(cant_pos_y)*np.sqrt(2))
     return 2*stroke
+
+
+# 
+
 
 
 # extract the harmonics and a sideband for a given data set with a given frequency, also able to pick the side bands properly
