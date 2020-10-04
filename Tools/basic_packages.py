@@ -45,4 +45,11 @@ from joblib import Parallel, delayed
 import multiprocessing
 
 from bisect import bisect_left
+from itertools import dropwhile, islice
 
+
+from skimage import data
+from skimage.registration import phase_cross_correlation
+from skimage.registration._phase_cross_correlation import _upsampled_dft
+from scipy.ndimage import fourier_shift
+from skimage.filters import window

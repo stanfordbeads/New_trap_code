@@ -245,7 +245,7 @@ def gaussian_fit_shadow_height(img,low_x_lim=670,up_x_lim=710,low_y_lim=400,up_y
              error_area = 1,
              limit_area= (-upper_area,-100), # if you want to limit things
              #fix_area = "False", # you can also fix it
-             mean = 465,
+             mean = (low_y_lim+up_y_lim)/2,
              error_mean = 1,
              #fix_mean = "True",
              limit_mean = (low_lim_mean,up_lim_mean),
@@ -325,7 +325,7 @@ def gaussian_fit_shadow_width(img,low_x_lim=670,up_x_lim=710,low_y_lim=350,up_y_
              error_area = 1,
              limit_area= (-upper_area,-100), # if you want to limit things
              #fix_area = "False", # you can also fix it
-             mean = 30,
+             mean = (low_lim_mean+up_lim_mean)/2,
              error_mean = 1,
              #fix_mean = "True",
              limit_mean = (low_lim_mean,up_lim_mean),
@@ -347,9 +347,11 @@ def gaussian_fit_shadow_width(img,low_x_lim=670,up_x_lim=710,low_y_lim=350,up_y_
 def from_shadow_image_to_width(image,threshold,area_low_limits=[650,750],area_width=70,flb=0,fub=70,area_max=3000,width_max=5,plot=False):
     thresh = threshold_image(image.copy(),threshold,256)
     img = thresh
-    z1 = np.mean(img[430:520],axis=0)[area_low_limits[0]:area_low_limits[0]+area_width]
+    low_bound_y=600
+    up_bound_y=700
+    z1 = np.mean(img[low_bound_y:up_bound_y],axis=0)[area_low_limits[0]:area_low_limits[0]+area_width]
     #plt.plot(z1)
-    z2 = np.mean(img[430:520],axis=0)[area_low_limits[1]:area_low_limits[1]+area_width]
+    z2 = np.mean(img[low_bound_y:up_bound_y],axis=0)[area_low_limits[1]:area_low_limits[1]+area_width]
     fit_img = z1-z2
     m = gaussian_fit_shadow_width(fit_img,low_y_lim=flb,up_y_lim=fub,upper_area=area_max,up_lim_width=width_max,img_type="Diff_Projection",)
     #print(m.values["area"],m.values["mean"],m.values["sigma"],m.values["constant"])
@@ -358,3 +360,57 @@ def from_shadow_image_to_width(image,threshold,area_low_limits=[650,750],area_wi
         plt.plot(range(area_width),gaussian(range(area_width),params=[m.values["area"],m.values["mean"],m.values["sigma"],m.values["constant"]]),label="fit")
 #plt.xlim(m.values["mean"]-100,m.values["mean"]+100)
     return m.values["mean"],m
+
+
+## everything for beam profiling
+
+def gaussian_beam(x,params=list):
+    '''
+    Generic defintion of a Gaussian bead profile (from Akio)
+    '''
+    #norm = (1/((1/2*params[2])*np.sqrt(np.pi * 2)))
+    return params[0] * np.exp(-2*(np.subtract(x,params[1])**2/(params[2]**2)))+params[3]
+
+
+def beam_width(x,params=list,wave_length=1.064):
+    #defines the beam width using 1064 nm laser
+    return params[0]*np.sqrt(1+((x-params[1])/(np.pi*params[0]*params[0]/wave_length))**2)
+
+
+def prepare_profile_data(files):
+    # prepare the data into a data frame using the calibration Akio has performed
+    df = pd.DataFrame()
+    spin_list = [] # a list for the spin_sum
+    qsum_list = [] # a list for the quad_sum 
+    cant_pos_list_x, cant_pos_list_y, cant_pos_list_z = [[] for  x in range(3)] # save the positions of the cantielever
+    spin_down_size_factor = len(files[0].spin_data)/len(files[0].xyz[0]) # 10 for normal operation, but can be different
+    
+    for i in tqdm(range(len(files))):
+        spin = np.zeros(len(files[0].xyz[0]))
+        spin_temp = files[i].spin_data
+        for j in range(len(files[i].xyz[0])):
+            spin[j]=np.average(spin_temp[int(spin_down_size_factor)*j: int(spin_down_size_factor)*j+ int(spin_down_size_factor-1)]) # average down to 5000 in order to match spin with the cantilever position.    
+        spin_list.append(spin)
+        qsum_list.append(files[i].quad_sum)
+        cant_pos_list_x.append(files[i].cant_pos[0])
+        cant_pos_list_y.append(files[i].cant_pos[1])
+        cant_pos_list_z.append(files[i].cant_pos[2])
+    df["QPD_SUM"] = qsum_list
+    df["SPIN_SUM"] = spin_list 
+    df["CANT_POS_X"] = cant_pos_list_x
+    df["CANT_POS_Y"] = cant_pos_list_y
+    df["CANT_POS_Z"] = cant_pos_list_z
+    
+    
+    # use calibration
+    ## applies calibration assuming x and y have the same
+    df["CANT_POS_X_cal"] = df["CANT_POS_X"].apply(lambda element: voltage_to_x_position(element))  
+    df["CANT_POS_Y_cal"] = df["CANT_POS_Y"].apply(lambda element: voltage_to_x_position(element)) 
+    df["CANT_POS_Z_cal"] = df["CANT_POS_Z"].apply(lambda element: voltage_to_z_position(element))
+    
+    
+    # differentiate the power to get dP/dx plots
+    df["QPD_SUM_diff"] = df["QPD_SUM"].apply(lambda element: np.diff(element)) # 
+    df["SPIN_SUM_diff"] = df["SPIN_SUM"].apply(lambda element: np.diff(element)) # 
+
+    return df
