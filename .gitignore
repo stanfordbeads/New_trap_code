@@ -1,2 +1,4 @@
+*.npy
 SensitivityFramework/results/
+SensitivityFramework/simulation/results/
 Scripts/Shield_Characterization/Results/

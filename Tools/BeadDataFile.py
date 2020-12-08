@@ -22,7 +22,16 @@ class BeadDataFile:
         quad_data = np.array(f['quad_data']) 
         self.fsamp = f.attrs['Fsamp']
         self.fsamp /= f.attrs['downsamp']
-
+       
+        try:
+            self.seismometer = np.array(f['seismometer'])
+        except:    
+            print('No seismometer data')
+        
+        try: 
+            self.z_set = f.attrs['z_set']
+        except:
+            print('No z_set data')
         
         try: 
             self.bead_height = f.attrs['bead_height']
@@ -79,7 +88,6 @@ class BeadDataFile:
         self.diag_pos_data = []
         self.cant_data = []
         self.other_data = []
-
         #Conditions under which data is taken
         self.time = "Time not loaded"
         high = np.uint32(pos_data.reshape(-1,11).T[9])

@@ -41,6 +41,20 @@ def load_dir_reduced_to_attr_pos_z(dirname,file_prefix,max_files):
     return var_list
 
 
+def load_dir_reduced_to_zset(dirname,file_prefix,max_files):
+    '''
+    Load height information from the h5 files in a loop into a list. Step size is fixed to 100. 
+    '''   
+    ## Load all filenames in directory
+    var_list = []
+    files = []
+    [files.append(file_) for file_ in os.listdir(dirname) if file_.startswith(file_prefix) if file_.endswith('.h5')]
+    files.sort(key=lambda f: int(''.join(filter(str.isdigit, f))))        
+    step_size = 100
+    for j in tqdm(np.arange(0,max_files,step_size)):
+        BDFs = [BDF.BeadDataFile(dirname+filename) for filename in files[j:j+step_size]]
+        [var_list.append(BDFs[k].z_set) for k in range(len(BDFs))]
+    return var_list
 
 def load_dir_reduced_to_qpd_sum(dirname,file_prefix,max_files):
     '''

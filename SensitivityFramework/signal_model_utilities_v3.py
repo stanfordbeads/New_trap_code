@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 int_time =1 
 sampling_frequency = 5000 # should be 5000 
-time = np.arange(0,int_time,1/sampling_frequency) # make a time array
+time_s = np.arange(0,int_time,1/sampling_frequency) # make a time array
 
 def force_vs_position(x_sep,height_sep,lambda_val,axis="X",yuk_or_grav="yuk",bead_size=7.6,posvec=np.linspace(-249.5, 249.0, 501)):
     '''
@@ -39,19 +39,19 @@ def force_vs_position(x_sep,height_sep,lambda_val,axis="X",yuk_or_grav="yuk",bea
     return posvec,forcevec
 
 # sine
-def position_at_time_sin_function(stroke,time,frequency,offset_y=0): 
+def position_at_time_sin_function(stroke,time_s,frequency,offset_y=0): 
     '''
     get the position for a given frequency and stroke using a pure sine wave. Included an offset in the y direction. 0 is the center of the attractor, which is center of the central gold finger
     '''
-    pos_at_time = stroke/2*np.sin(2*np.pi*time*frequency)+offset_y
+    pos_at_time = stroke/2*np.sin(2*np.pi*time_s*frequency)+offset_y
     return pos_at_time
 
 ## sinusoidal movement
-def force_at_a_time_sin_function(stroke,time,frequency,pos_vec,force_vec,offset_y=0):
+def force_at_a_time_sin_function(stroke,time_s,frequency,pos_vec,force_vec,offset_y=0):
     '''
     Interpolates between the position to get a smooth force vs time for a sine function
     '''
-    osci_pos = position_at_time_sin_function(stroke,time,frequency,offset_y=offset_y)
+    osci_pos = position_at_time_sin_function(stroke,time_s,frequency,offset_y=offset_y)
     return np.interp(osci_pos,pos_vec,force_vec, left=None, right=None, period=None)
 
 def force_vs_time(x_sep,height_sep,stroke,frequency,axis,lambda_val,offset_y=0,yuk_or_grav="yuk",alpha=1,bead_size=7.6):
@@ -59,5 +59,5 @@ def force_vs_time(x_sep,height_sep,stroke,frequency,axis,lambda_val,offset_y=0,y
     This gives the force as a function of time for a sinusoidial movement in the y-direction. The time parameter is a second sampled with 5kHz.
     '''
     p,f = force_vs_position(x_sep,height_sep,lambda_val,axis=axis,yuk_or_grav=yuk_or_grav,bead_size=bead_size)
-    force = alpha * force_at_a_time_sin_function(stroke,time,frequency,p,f,offset_y=offset_y)
-    return time,force
+    force = alpha * force_at_a_time_sin_function(stroke,time_s,frequency,p,f,offset_y=offset_y)
+    return time_s,force
