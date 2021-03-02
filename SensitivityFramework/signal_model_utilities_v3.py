@@ -1,3 +1,5 @@
+# uses 10 um attractor and is the right thing to use
+
 import sys
 sys.path.append("/home/analysis_user/opt_lev_analysis/lib/")
 import numpy as np

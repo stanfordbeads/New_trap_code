@@ -22,6 +22,7 @@ from discharge_tools import *
 from analysis_tools import *
 from joblib import Parallel, delayed
 import multiprocessing
+from skimage.registration import phase_cross_correlation as pcc
 
 
 
@@ -192,14 +193,14 @@ def get_height_projection(file,low_lim=600,up_lim=700,pixel_or_height="height",p
         
     return z
 
-def get_height_fit(file,low_x_lim=600,up_x_lim=700,low_y_lim=420,up_y_lim=550,up_lim_width=8,upper_area=30000,plot=True,img_height=1024,img_width=1280):
+def get_height_fit(file,low_x_lim=600,up_x_lim=700,low_y_lim=420,up_y_lim=550,up_lim_width=8,upper_area=30000,plot=True,img_height=1024,img_width=1280,axis=0):
     '''
     Return fit function for Gaussian fit of the bead image without notch filter.
     '''
     img1 = file
     img2 = file.transpose()
     z = np.mean(img2[low_x_lim:up_x_lim],axis=0)   
-    m = gaussian_bead_pos_fit(img1,axis=0,low_x_lim=low_x_lim,up_x_lim=up_x_lim,low_y_lim=low_y_lim,up_y_lim=up_y_lim,up_lim_width=up_lim_width,upper_area=upper_area,img_height=img_height,img_width=img_width)             
+    m = gaussian_bead_pos_fit(img1,axis=axis,low_x_lim=low_x_lim,up_x_lim=up_x_lim,low_y_lim=low_y_lim,up_y_lim=up_y_lim,up_lim_width=up_lim_width,upper_area=upper_area,img_height=img_height,img_width=img_width)             
     if(plot==True):
         plt.plot(range(img_height),gaussian(range(img_height),params=[m[1].values["area"],m[1].values["mean"],m[1].values["sigma"],m[1].values["constant"]]),label="fit")
         plt.plot(range(img_height),z,label = "data")
@@ -288,6 +289,12 @@ def from_shadow_image_to_height(image,threshold,area_low_limits=[670,730],area_w
     return m.values["mean"],m # in pixels
 
 
+def position_shift_PCC(image,zeroth_image,upsample_factor=100): #position_shift_from_PCC
+    zeroth=zeroth_image
+    shift,_,_ = pcc(zeroth,image,upsample_factor=upsample_factor)
+    return shift
+
+
 # add tools for the Y position
 
 def gaussian_fit_shadow_width(img,low_x_lim=670,up_x_lim=710,low_y_lim=350,up_y_lim=650,upper_area=3000,up_lim_width=10,img_type="Image"):    
@@ -360,6 +367,12 @@ def from_shadow_image_to_width(image,threshold,area_low_limits=[650,750],area_wi
         plt.plot(range(area_width),gaussian(range(area_width),params=[m.values["area"],m.values["mean"],m.values["sigma"],m.values["constant"]]),label="fit")
 #plt.xlim(m.values["mean"]-100,m.values["mean"]+100)
     return m.values["mean"],m
+
+## PCC method 
+
+
+
+
 
 
 ## everything for beam profiling
