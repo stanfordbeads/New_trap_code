@@ -23,6 +23,8 @@ from analysis_tools import *
 from height_tools import *
 from joblib import Parallel, delayed
 import multiprocessing
+import tables
+
 
 def load_dir_reduced_to_attr_pos_z(dirname,file_prefix,max_files):
     '''
@@ -41,20 +43,6 @@ def load_dir_reduced_to_attr_pos_z(dirname,file_prefix,max_files):
     return var_list
 
 
-def load_dir_reduced_to_zset(dirname,file_prefix,max_files):
-    '''
-    Load height information from the h5 files in a loop into a list. Step size is fixed to 100. 
-    '''   
-    ## Load all filenames in directory
-    var_list = []
-    files = []
-    [files.append(file_) for file_ in os.listdir(dirname) if file_.startswith(file_prefix) if file_.endswith('.h5')]
-    files.sort(key=lambda f: int(''.join(filter(str.isdigit, f))))        
-    step_size = 100
-    for j in tqdm(np.arange(0,max_files,step_size)):
-        BDFs = [BDF.BeadDataFile(dirname+filename) for filename in files[j:j+step_size]]
-        [var_list.append(BDFs[k].z_set) for k in range(len(BDFs))]
-    return var_list
 
 def load_dir_reduced_to_qpd_sum(dirname,file_prefix,max_files):
     '''
@@ -90,11 +78,78 @@ def load_dir_reduced_to_spin(dirname,file_prefix,max_files):
         #[var_list.append(dt.datetime.fromtimestamp(BDFs[k].time[0]/1e9)) for k in range(len(BDFs))]
     return var_list
 
-
 def load_dir_reduced_to_time(dirname,file_prefix,max_files):
     '''
     Load time information from the h5 files in a loop into a list. Step size is fixed to 100. 
     '''   
+    ## Load all filenames in directory
+    var_list = []
+    files = []
+    [files.append(file_) for file_ in os.listdir(dirname) if file_.startswith(file_prefix) if file_.endswith('.h5')]
+    files.sort(key=lambda f: int(''.join(filter(str.isdigit, f))))        
+    var_list = []
+    for i in tqdm(range(len(files))):
+        with tables.File(dirname + files[i],'r') as h5f:
+            high = np.uint32(h5f.root.pos_data.read().reshape(-1,11).T[9])
+            low = np.uint32(h5f.root.pos_data.read().reshape(-1,11).T[10])
+            time_var = (high.astype(np.uint64) << np.uint64(32)) + low.astype(np.uint64)
+            var_list.append(time_var[0])
+    return var_list
+
+def load_dir_reduced_to_height(dirname,file_prefix,max_files):
+    '''
+    Load time information from the h5 files in a loop into a list. Step size is fixed to 100. 
+    '''   
+    ## Load all filenames in directory
+    var_list = []
+    files = []
+    [files.append(file_) for file_ in os.listdir(dirname) if file_.startswith(file_prefix) if file_.endswith('.h5')]
+    files.sort(key=lambda f: int(''.join(filter(str.isdigit, f))))        
+    var_list = []
+    for i in tqdm(range(len(files))):
+        with tables.File(dirname + files[i],'r') as h5f:
+            height_var = h5f.get_node_attr("/","bead_height")
+            var_list.append(height_var)
+    return var_list
+
+def load_dir_reduced_to_zset(dirname,file_prefix,max_files):
+    '''
+    Load time information from the h5 files in a loop into a list. Step size is fixed to 100. 
+    '''   
+    ## Load all filenames in directory
+    var_list = []
+    files = []
+    [files.append(file_) for file_ in os.listdir(dirname) if file_.startswith(file_prefix) if file_.endswith('.h5')]
+    files.sort(key=lambda f: int(''.join(filter(str.isdigit, f))))        
+    var_list = []
+    for i in tqdm(range(len(files))):
+        with tables.File(dirname + files[i],'r') as h5f:
+            zset_var = h5f.get_node_attr("/","z_set")
+            var_list.append(zset_var)
+    return var_list
+
+def load_dir_reduced_to_z(dirname,file_prefix,max_files):
+    '''
+    Load time information from the h5 files in a loop into a list. Step size is fixed to 100. 
+    '''   
+    ## Load all filenames in directory
+    var_list = []
+    files = []
+    [files.append(file_) for file_ in os.listdir(dirname) if file_.startswith(file_prefix) if file_.endswith('.h5')]
+    files.sort(key=lambda f: int(''.join(filter(str.isdigit, f))))        
+    var_list = []
+    for i in tqdm(range(len(files))):
+        with tables.File(dirname + files[i],'r') as h5f:
+            z_var=h5f.root.quad_data.read().reshape(-1,12).T[5:10][4]            
+            var_list.append(np.mean(z_var))
+    return var_list
+
+
+''' old version of time and height " 
+def load_dir_reduced_to_time(dirname,file_prefix,max_files):
+    
+    #Load time information from the h5 files in a loop into a list. Step size is fixed to 100. 
+       
     ## Load all filenames in directory
     var_list = []
     files = []
@@ -109,9 +164,9 @@ def load_dir_reduced_to_time(dirname,file_prefix,max_files):
 
 
 def load_dir_reduced_to_height(dirname,file_prefix,max_files):
-    '''
-    Load height information from the h5 files in a loop into a list. Step size is fixed to 100. 
-    '''   
+    
+    #Load height information from the h5 files in a loop into a list. Step size is fixed to 100. 
+  
     ## Load all filenames in directory
     var_list = []
     files = []
@@ -122,6 +177,22 @@ def load_dir_reduced_to_height(dirname,file_prefix,max_files):
         BDFs = [BDF.BeadDataFile(dirname+filename) for filename in files[j:j+step_size]]
         [var_list.append(BDFs[k].bead_height) for k in range(len(BDFs))]
     return var_list
+    
+    
+
+def load_dir_reduced_to_zset(dirname,file_prefix,max_files):
+    #Load height information from the h5 files in a loop into a list. Step size is fixed to 100. 
+    ## Load all filenames in directory
+    var_list = []
+    files = []
+    [files.append(file_) for file_ in os.listdir(dirname) if file_.startswith(file_prefix) if file_.endswith('.h5')]
+    files.sort(key=lambda f: int(''.join(filter(str.isdigit, f))))        
+    step_size = 100
+    for j in tqdm(np.arange(0,max_files,step_size)):
+        BDFs = [BDF.BeadDataFile(dirname+filename) for filename in files[j:j+step_size]]
+        [var_list.append(BDFs[k].z_set) for k in range(len(BDFs))]
+    return var_list    
+'''
 
 def environment_processor(year,month,day,bead_date="20200320",bead_number=1,no_bead=False):
     '''
