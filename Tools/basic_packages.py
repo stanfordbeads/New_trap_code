@@ -23,7 +23,7 @@ import h5py
 
 import time
 import datetime as dt
-from tqdm import tqdm
+from tqdm import tqdm_notebook as tqdm
 
 import iminuit
 from iminuit import Minuit, describe
