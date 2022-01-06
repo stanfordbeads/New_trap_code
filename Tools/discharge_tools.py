@@ -66,7 +66,7 @@ def correlation(drive, response, fsamp, fdrive, filt = False, band_width = 1):
        correctly normalized for use in step-calibration.
 
        INPUTS:   drive, drive signal as a function of time
-                 response, resposne signal as a function of time
+                 response, response signal as a function of time
                  fsamp, sampling frequency
                  fdrive, predetermined drive frequency
                  filt, boolean switch for bandpass filtering
@@ -163,6 +163,7 @@ def digital_demod(dat, fDemod, fs=5000, tFFT=10, win=('tukey',0.25),
     dat = signal.filtfilt(b, a, dat)
     dat = np.asarray(dat)
     if dat.size==0:
+        print("EMPTY")
         return(np.empty(dat.shape[-1]))
     nperseg = int(np.round(tFFT*fs)) # Number of segments in a sample segment.
     nOverlap = int(nOverlap);
