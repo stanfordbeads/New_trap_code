@@ -42,7 +42,7 @@ def load_dir_sorted(dirname, file_prefix = 'Discharge',start_file=0, max_file=50
     [files.append(file_) for file_ in os.listdir(dirname) if file_.startswith(file_prefix) if file_.endswith('.h5')]
     files.sort(key=lambda f: int(''.join(filter(str.isdigit, f))))    
     # Load data into a BeadDataFile list
-    BDFs = [BDF.BeadDataFile(dirname+filename) for filename in files[start_file:start_file+max_file]]
+    BDFs = [BDF.BeadDataFile(dirname+filename) for filename in tqdm(files[start_file:start_file+max_file])]
     print(len(files),' files in folder')
     print(len(BDFs),' files loaded')
     return BDFs
