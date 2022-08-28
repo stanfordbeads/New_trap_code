@@ -24,6 +24,11 @@ class BeadDataFile:
         self.fsamp /= f.attrs['downsamp']
        
         try:
+            self.p_trans = np.array(f['p_trans'])
+        except:    
+            print('No p_trans data')
+    
+        try:
             self.seismometer = np.array(f['seismometer'])
         except:    
             print('No seismometer data')

@@ -127,7 +127,7 @@ def build_z_response_discharge(bdf_list, drive_freq, bandwidth=1, decimate=10, p
 
 
 def digital_demod(dat, fDemod, fs=5000, tFFT=10, win=('tukey',0.25),
-        nOverlap=0, detrend='constant', median=False, band_width=2):
+        nOverlap=0, detrend='constant', median=False, filt=False, band_width=2):
     '''
     Single frequency digital demodulation.
 
@@ -158,9 +158,13 @@ def digital_demod(dat, fDemod, fs=5000, tFFT=10, win=('tukey',0.25),
     TODO: error handling...
 '''
     #band_width=2
-    b, a = signal.butter(3, [2.*(fDemod-band_width/2.)/fs, \
-                         2.*(fDemod+band_width/2.)/fs ], btype = 'bandpass')
-    dat = signal.filtfilt(b, a, dat)
+    if filt:
+        sos = signal.butter(3, [2.*(fDemod-band_width/2.)/fs, \
+                         2.*(fDemod+band_width/2.)/fs ], btype = 'bandpass',output="sos")
+#     b, a = signal.butter(3, [2.*(fDemod-band_width/2.)/fs, \
+#                     2.*(fDemod+band_width/2.)/fs ], btype = 'bandpass')
+#    dat = signal.filtfilt(b, a, dat)
+        dat = signal.sosfiltfilt(sos,dat)
     dat = np.asarray(dat)
     if dat.size==0:
         print("EMPTY")
